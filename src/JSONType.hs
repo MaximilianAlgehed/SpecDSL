@@ -1,6 +1,6 @@
 {-# LANGUAGE MultiParamTypeClasses #-}
 module JSONType where
-import Generator
+import Typeclasses 
 import Test.QuickCheck
 import Text.PrettyPrint.HughesPJ
 
@@ -46,3 +46,11 @@ instance Implements JSONValue JSONType where
                                 obj <- sequence $ map implement t
                                 return $ JObjectV obj
     implement (JArray t)  = sized $ \n -> fmap JArrayV $ sequence $ replicate n $ implement t
+
+instance Checks JSONType JSONValue where
+    check JBool (JBoolV _)     = True
+    check JString (JStringV _) = True
+    check JNumber (JNumberV _) = True
+    check (JObject tps) (JObjectV vls) = and $ zipWith check tps vls
+    check (JArray t) (JArrayV vls) = and $ map (check t) vls
+    check _ _ = False

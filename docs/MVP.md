@@ -5,6 +5,9 @@ ST = Session Types
 * ST -> DSL
 
 * Predicates -> DSL
+    * We need to base this DSL
+      on some type of temporal
+      logic like LTL/CTL.
 
 * Custom Generators DSL
     * We may get this from the
@@ -17,6 +20,8 @@ ST = Session Types
         run :: SessionType t -> Channel t -> IO Bool
         Tests if the other party is fulfilling the contract
         of the SessionType.
+        
+        This needs to be tested.
 
     * Predicates + Custom Generators -> Test
         test :: SessionType t -> Predicate t -> Channel t -> IO Bool
