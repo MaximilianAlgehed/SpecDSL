@@ -3,7 +3,6 @@
 ST = Session Types
 
 * ST -> DSL
-    * Fix branch representation in Trace type
 
 * Predicates -> DSL
 
