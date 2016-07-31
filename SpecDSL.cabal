@@ -14,8 +14,10 @@ cabal-version:       >=1.10
 
 executable SpecDSL
   main-is:             Main.hs
-  -- other-modules:
+  other-modules:       Examples, SessionTypes, JSONType
   other-extensions:    MultiParamTypeClasses, DeriveFunctor
-  build-depends:       base >=4.9 && <4.10, pretty >=1.1 && <1.2
+  build-depends:       base >=4.9 && <4.10,
+                       QuickCheck >= 2.9,
+                       pretty >=1.1 && <1.2
   hs-source-dirs:      src
   default-language:    Haskell2010

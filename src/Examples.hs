@@ -1,3 +1,5 @@
+module Examples where
+
 import Test.QuickCheck
 import SessionTypes
 import JSONType
@@ -5,7 +7,7 @@ import JSONType
 shopping :: SessionType JSONType
 shopping = dual $ addBook :. (shopping :| checkOut)
     where
-        addBook = (!) (JObject []) 
+        addBook = (!) (JObject [])
         checkOut = (!) (JObject []) :. (!) (JObject []) :. (?) (JObject []) :. end
 
---testShopping :: IO (Trace (Session 
+--testShopping :: IO (Trace (Session
