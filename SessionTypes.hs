@@ -2,15 +2,12 @@
 module SessionTypes where
 import JSONType
 
-type Name = String
-
 data SessionType t = B (SessionType t)
                    | Q (SessionType t)
                    | End
                    | (SessionType t) :& (SessionType t)
                    | (SessionType t) :| (SessionType t)
                    | (SessionType t) :. (SessionType t)
-                   | Var Name
                    | Primitive t
                    deriving (Show, Eq, Functor)
 
