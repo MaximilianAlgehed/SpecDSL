@@ -3,9 +3,7 @@
 ST = Session Types
 
 * ST -> DSL
-    * Trace data type which gives a behaviour
-      for a session type through the "Implements"
-      interface
+    * Fix branch representation in Trace type
 
 * Predicates -> DSL
 
