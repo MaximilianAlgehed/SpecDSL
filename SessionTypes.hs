@@ -1,6 +1,5 @@
 {-# LANGUAGE DeriveFunctor #-}
 module SessionTypes where
-import JSONType
 
 data SessionType t = B (SessionType t)
                    | Q (SessionType t)
@@ -11,16 +10,17 @@ data SessionType t = B (SessionType t)
                    | Primitive t
                    deriving (Show, Eq, Functor)
 
-data Session typeReal typeTemplate  = Channel (SessionType typeTemplate)
-                                    | P (Session typeReal)
-                                    | L (Session typeReal)
-                                    | R (Session typeReal)
-                                    | End
-                                    deriving (Show)
+data Session typeReal typeTemplate = Channel (SessionType typeTemplate)
+                                   | P (Session typeReal)
+                                   | L (Session typeReal)
+                                   | R (Session typeReal)
+                                   | End
+                                   deriving (Show)
 
 data Trace t = Send t (Trace t)
              | Recv (t -> Trace t)
              | Terminate
+             | Failed
 
 dual :: SessionType t -> SessionType t
 dual (B t)     = Q (dual t)
