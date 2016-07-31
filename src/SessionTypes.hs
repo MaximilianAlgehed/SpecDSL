@@ -11,48 +11,44 @@ data SessionType t = B t -- Send something
                    | End -- Termination
                    deriving (Show, Eq, Functor)
 
-data Session typeReal typeTemplate = P typeReal
-                                   | L (Session typeReal typeTemplate)
-                                   | R (Session typeReal typeTemplate)
-                                   deriving (Show)
+data Choice = L | R deriving (Show)
 
 data Trace t = Send t (Maybe (Trace t))
-             | Recv (Either (Maybe (Trace t)) (Trace t, Trace t))
+             | Recv (Maybe (Trace t))
+             | Branch (Maybe (Trace t, Trace t))
+             | Choose Choice (Maybe (Trace t))
              | Terminate
-             deriving (Show)
-
-instance Functor Trace where
-    fmap f (Send t m) = Send (f t) (fmap (fmap f) m)
-    fmap f (Recv (Left m)) = Recv (Left (fmap (fmap f) m))
-    fmap f (Recv (Right (t, t'))) = Recv (Right (fmap f t, fmap f t'))
-    fmap _ Terminate = Terminate
+             deriving (Show, Functor)
 
 appendTrace :: Trace t -> Trace t -> Trace t
-appendTrace Terminate _               = Terminate
-appendTrace (Send t Nothing) tr       = Send t $ Just tr
-appendTrace (Send t (Just tr)) tr'    = Send t $ Just $ tr `appendTrace` tr'
-appendTrace (Recv (Left (Just t))) tr = Recv $ Left $ Just $ t `appendTrace` tr
-appendTrace (Recv (Left Nothing)) tr  = Recv $ Left $ Just tr
-appendTrace (Recv (Right (t, t'))) tr = Recv $ Right (t `appendTrace` tr, t' `appendTrace` tr)
+appendTrace Terminate _                = Terminate
+appendTrace (Send t Nothing) tr        = Send t $ Just tr
+appendTrace (Send t (Just tr)) tr'     = Send t $ Just $ tr `appendTrace` tr'
+appendTrace (Branch Nothing) tr        = Branch $ Just (tr, tr)
+appendTrace (Branch (Just (t, t'))) tr = Branch $ Just (t `appendTrace` tr, t' `appendTrace` tr)
+appendTrace (Choose c Nothing) tr      = Choose c $ Just tr
+appendTrace (Choose c (Just t)) tr     = Choose c $ Just $ t `appendTrace` tr
+appendTrace (Recv Nothing) tr          = Recv $ Just tr
+appendTrace (Recv (Just t)) tr         = Recv $ Just $ t `appendTrace` tr
 
 -- | This function is buggy at the moment, it does not work branches
-implementTrace :: (Implements t t') => SessionType t' -> Gen (Trace (Session t t'))
+implementTrace :: (Implements t t') => SessionType t' -> Gen (Trace t) 
 implementTrace (B t)       = do
                                 t' <- implement t
-                                return $ Send (P t') Nothing 
-implementTrace (Q t)       = return $ Recv $ Left Nothing
-implementTrace (st :| st') = oneof $ [fmap (fmap L) (implementTrace st), fmap (fmap R) (implementTrace st')]
+                                return $ Send t' Nothing 
+implementTrace (Q t)       = return $ Recv $ Nothing
+implementTrace (st :| st') = oneof $ [fmap ((Choose L) . Just) (implementTrace st), fmap ((Choose R) . Just) (implementTrace st')]
 implementTrace (st :& st') = do
                                 t  <- implementTrace st
                                 t' <- implementTrace st'
-                                return $ Recv $ Right (t, t') 
+                                return $ Branch $ Just (t, t')
 implementTrace (st :. st') = do
                                 t  <- implementTrace st
                                 t' <- implementTrace st'
                                 return $ t `appendTrace` t'
 implementTrace End         = return Terminate
 
-instance (Implements t t') => Implements (Trace (Session t t')) (SessionType t') where
+instance (Implements t t') => Implements (Trace t) (SessionType t') where
     implement = implementTrace
 
 dual :: SessionType t -> SessionType t

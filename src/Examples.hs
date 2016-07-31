@@ -5,9 +5,11 @@ import SessionTypes
 import JSONType
 
 shopping :: SessionType JSONType
-shopping = dual $ addBook :. (shopping :| checkOut)
+shopping = addBook :. (shopping :| checkOut)
     where
-        addBook = (!) (JObject [])
-        checkOut = (!) (JObject []) :. (!) (JObject []) :. (?) (JObject []) :. end
+        addBook = (!) JNumber
+        checkOut = (!) JNumber :. (!) JNumber :. (?) JNumber :. end
 
---testShopping :: IO (Trace (Session
+sizedShopping :: Int -> SessionType JSONType
+sizedShopping 0 = (!) JNumber :. end
+sizedShopping n = (!) JNumber :. (sizedShopping (n-1) :| (!) JNumber) :. end
