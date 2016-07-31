@@ -11,11 +11,12 @@ data SessionType t = B (SessionType t)
                    | Primitive t
                    deriving (Show, Eq, Functor)
 
-data Session t = Channel (SessionType t)
-               | P (Session t)
-               | L (Session t)
-               | R (Session t)
-               | End
+data Session typeReal typeTemplate  = Channel (SessionType typeTemplate)
+                                    | P (Session typeReal)
+                                    | L (Session typeReal)
+                                    | R (Session typeReal)
+                                    | End
+                                    deriving (Show)
 
 data Trace t = Send t (Trace t)
              | Recv (t -> Trace t)
