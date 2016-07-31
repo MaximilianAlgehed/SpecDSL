@@ -2,16 +2,25 @@
 module SessionTypes where
 import JSONType
 
+type Name = String
+
 data SessionType t = B (SessionType t)
                    | Q (SessionType t)
                    | End
                    | (SessionType t) :& (SessionType t)
                    | (SessionType t) :| (SessionType t)
                    | (SessionType t) :. (SessionType t)
+                   | Var Name
                    | Primitive t
                    deriving (Show, Eq, Functor)
 
-data Trace t = Send t
+data Session t = Channel (SessionType t)
+               | P (Session t)
+               | L (Session t)
+               | R (Session t)
+               | End
+
+data Trace t = Send t (Trace t)
              | Recv (t -> Trace t)
              | Terminate
 
@@ -25,6 +34,9 @@ dual t         = t
 
 t :: t -> SessionType t
 t = Primitive
+
+v :: Name -> SessionType t
+v = Var
 
 end :: SessionType t
 end = End

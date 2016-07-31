@@ -17,12 +17,12 @@ ST = Session Types
 * DSL -> Tests
 
     * ST -> Test
-        run :: SessionType t -> Channel t -> Bool
+        run :: SessionType t -> Channel t -> IO Bool
         Tests if the other party is fulfilling the contract
         of the SessionType.
 
     * Predicates + Custom Generators -> Test
-        test :: SessionType t -> Predicate t -> Channel t -> Bool
+        test :: SessionType t -> Predicate t -> Channel t -> IO Bool
         Tests if a given predicate holds with respect to the
         session type over a channel, should also do shrinking etc
         to find a minimum failing example.
