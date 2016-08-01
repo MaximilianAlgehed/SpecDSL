@@ -1,4 +1,4 @@
-{-# LANGUAGE TypeFamilies, MultiParamTypeClasses, DeriveFunctor, FlexibleContexts #-}
+{-# LANGUAGE MultiParamTypeClasses, DeriveFunctor, FlexibleContexts #-}
 module Run where
 import Control.Monad.Writer.Lazy
 import Control.Concurrent.Chan
@@ -6,11 +6,7 @@ import Test.QuickCheck
 import Typeclasses 
 import SessionTypes
 import JSONType
-
-data Protocol t = Pure t
-                | ChooseLeft
-                | ChooseRight
-                deriving (Show, Functor)
+import Model
 
 class Channel ch t where
     new :: IO (ch (Protocol t))
@@ -21,9 +17,6 @@ instance Channel Chan JSONValue where
     new = newChan
     put = writeChan
     get = readChan
-
-data Interaction t = Got t | Sent t deriving (Show, Functor)
-type Log t = [Interaction (Protocol t)]
 
 -- Checks that a Channel implements the protocol given by
 -- a session type by testing it against a random trace that conforms

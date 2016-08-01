@@ -3,16 +3,27 @@
 ST = Session Types
 
 * ST -> DSL
+    * Branches and Choices may need to be named
+      to make the process of specifying predicates
+      simpler.
 
 * Predicates -> DSL
     * We need to base this DSL
       on some type of temporal
-      logic like LTL/CTL.
+      logic like LTL.
+      Testing is then a case of
+      verifiying that
+      log |= predicate.
+    * The DSL needs to support a slew of high-level
+      features to make sure that you don't have to write
+      p -> (~q U (q & r)) to express:
+      "The first thing that satisfies q after p also
+      satisfies r"
 
 * Custom Generators DSL
-    * We may get this from the
-      "Implements" type class +
-      newtype wrapping, maybe...
+    * Should just be a case of supplying something
+      like "SessionType MyTypeTemplate -> Gen MyTypeThatIWantToTest",
+      basically a custom implements function.
 
 * DSL -> Tests
 
