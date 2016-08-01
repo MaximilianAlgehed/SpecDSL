@@ -84,9 +84,5 @@ bookServer (chi, cho) = loop []
                                          return ()
                         _           -> return ()
 
-testBooks = do
-                ch <- newChan
-                ch' <- newChan
-                forkIO $ bookServer (ch, ch')
-                test bookShopClient (P ch' ch) booksPredicate
+testBooks = quickTest (\(P x y) -> bookServer (x, y)) bookShopClient booksPredicate
 
