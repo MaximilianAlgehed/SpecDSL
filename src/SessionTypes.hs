@@ -3,6 +3,8 @@ module SessionTypes where
 import Test.QuickCheck
 import Typeclasses
 
+-- | Session type parameterized over some
+-- | type universe t
 data SessionType t = B t -- Send something
                    | Q t -- Get something
                    | (SessionType t) :& (SessionType t) -- Branch
@@ -11,6 +13,7 @@ data SessionType t = B t -- Send something
                    | End -- Termination
                    deriving (Show, Eq, Functor)
 
+-- | Go left or go right
 data Choice = L | R deriving (Show)
 
 data Trace t t'  = Send t (Maybe (Trace t t'))

@@ -11,6 +11,7 @@ data LTL domain = Atomic (domain -> LTL domain)
                 | X (LTL domain)
                 | U (LTL domain) (LTL domain)
                 | G (LTL domain)
+                | F (LTL domain)
 
 -- Check if an execution trace satisfies an LTL formula
 -- This needs to be extended to fit finite traces
@@ -32,11 +33,12 @@ check (U l r) xs        = case y of
         fir n f [] = if check f [] then n else Nothing
         fir n f t  = if check f t then n else fir (fmap (+1) n) f (tail t)
 check (G ltl) xs        = and [check ltl (drop n xs) | n <- [0..(length xs - 1)]]
+check (F ltl) xs        = or [check ltl (drop n xs) | n <- [0..(length xs - 1)]]
 check _ _               = False
 
 -- Some nice shorthands
 a .| b = Not (And (Not a) (Not b))
 (.&) = And
 a = Atomic
-iff p = Atomic (\x -> if p x then Top else Bottom)
+boolP p = Atomic (\x -> if p x then Top else Bottom)
 b ===> ltl = if b then ltl else Top

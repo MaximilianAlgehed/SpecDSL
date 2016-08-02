@@ -1,6 +1,7 @@
 {-# LANGUAGE MultiParamTypeClasses, DeriveFunctor, FlexibleContexts, FlexibleInstances #-}
 module Run where
 
+import System.IO
 import Control.Concurrent
 import Control.Monad.Writer.Lazy
 import Control.Concurrent.Chan
@@ -71,28 +72,35 @@ test t ch pred = do
                     (b, logs) <- runWriterT (checkProtocolCompliance t ch)
                     if not b then
                         do
+                            hPutStr stderr "\r                               \r"
                             putStrLn $ "Process does not implement session type"
                             putStrLn $ show logs
                             return False
                     else
                        if not (LTL.check pred logs) then
                             do
+                                hPutStr stderr "\r                               \r"
                                 putStrLn $ "Predicate counterexample"
                                 putStrLn $ show logs
                                 return False
                        else
                             return True
 
+-- | Run multiple tests to find a counterexample
+-- | that shows that a process does not implement
+-- | a session type OR it does not comply with the
+-- | spec in the form of an LTL formula
 quickTest :: (Implements r t, Checks t r, BiChannel ch r, Show r) =>
-    (ch (Protocol r) -> IO ()) ->
-    SessionType t ->
-    LTL.LTL (Interaction (Protocol r)) ->
+    (ch (Protocol r) -> IO ()) ->         -- Function to test
+    SessionType t ->                      -- The session type for the interaction
+    LTL.LTL (Interaction (Protocol r)) -> -- The LTL predicate
     IO ()
-quickTest impl t pred = loop 100
+quickTest impl t pred = loop 1000
     where
-        loop 0 = putStrLn "O.K"
+        loop 0 = putStrLn "\rO.K"
         loop n = do
-                    putStrLn $ show n
+                    hPutStr stderr $ "\r                  \r"
+                    hPutStr stderr $ show n
                     ch <- new
                     forkIO $ impl (bidirect ch)
                     b <- test t ch pred

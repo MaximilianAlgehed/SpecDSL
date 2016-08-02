@@ -49,9 +49,9 @@ bookShopClient = (!)B :. (bookShopClient :| ((!)RB :. (?)YB)) :. end
 -- I will see that book in the basket when I request to see my basket
 booksPredicate :: LTL (Interaction (Protocol Shopping))
 booksPredicate = G $ a (\message -> case message of
-                        Sent (Pure (Book b)) -> U (Not (a isBasket)) (a (contains b))
-                        _            -> Top
-                   )
+                                        Sent (Pure (Book b)) -> U (Not (Atomic isBasket)) (Atomic (contains b))
+                                        _                    -> Top
+                       )
                where
                 isBasket (Got (Pure (YourBasket _))) = Top
                 isBasket _                           = Bottom
