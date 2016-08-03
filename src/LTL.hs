@@ -42,3 +42,5 @@ a .| b = Not (And (Not a) (Not b))
 a = Atomic
 boolP p = Atomic (\x -> if p x then Top else Bottom)
 b ===> ltl = if b then ltl else Top
+fromBool True = Top
+fromBool False = Bottom
