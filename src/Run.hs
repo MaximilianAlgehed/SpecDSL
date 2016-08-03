@@ -107,4 +107,6 @@ quickTest impl t pred = loop 1000
                     if b then
                         loop (n-1)
                     else
-                        return ()
+                        do
+                            putStrLn $ "After "++(show (1000 - n))++" tests"
+                            return ()

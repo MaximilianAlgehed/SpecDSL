@@ -11,7 +11,7 @@
 
 * Combined syntax for SessionTypes + Predicates
 
-* Polymorphic session types
+* Polymorphic session types + Session types with channels etc.
 
 * Tesing monadic code at the same time as testing protocols, maybe?
 
