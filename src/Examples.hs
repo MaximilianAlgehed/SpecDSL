@@ -11,17 +11,6 @@ import JSONType
 import LTL
 import Run
 
-shopping :: SessionType JSONType
-shopping = addBook :. (shopping :| checkOut)
-    where
-        addBook = (!) JNumber
-        checkOut = (!) JNumber :. (!) JNumber :. (?) JNumber :. end
-
-sizedShopping :: Int -> SessionType JSONType
-sizedShopping 0 = (!) JNumber :. end
-sizedShopping n = (!) JNumber :. (sizedShopping (n-1) :| (!) JNumber) :. end
-
-
 {- What follows is a toy example worked out for the purpose of
  - showing what is possible with the system. The example shows
  - how we can specify the correctness of a shopping system -} 
@@ -61,11 +50,11 @@ booksPredicate = G $ a (\message -> case message of
                     | otherwise         = Bottom
                 contains _ _            = Bottom
 
-bookServer :: (Chan (Protocol Shopping), Chan (Protocol Shopping)) -> IO ()
-bookServer (chi, cho) = loop []
+bookServer :: P Chan (Protocol Shopping) -> IO ()
+bookServer ch = loop []
     where
         loop xs = do
-                    (Pure (Book b)) <- readChan chi
+                    (Pure (Book b)) <- get ch
 
                     -- There is a bug RIGHT HERE
                     -- for demonstration purposes!
@@ -75,14 +64,13 @@ bookServer (chi, cho) = loop []
                         awaitBranch xs
 
         awaitBranch xs = do
-                    br <- readChan chi
+                    br <- get ch 
                     case br of
                         ChooseLeft -> loop xs
                         ChooseRight -> do
-                                         Pure RequestBasket <- readChan chi
-                                         writeChan cho (Pure (YourBasket xs))
+                                         Pure RequestBasket <- get ch
+                                         put ch (Pure (YourBasket xs))
                                          return ()
                         _           -> return ()
 
-testBooks = quickTest (\(P x y) -> bookServer (x, y)) bookShopClient booksPredicate
-
+testBooks = quickTest bookServer bookShopClient booksPredicate
