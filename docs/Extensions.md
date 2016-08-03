@@ -1,13 +1,17 @@
 # Extensions
 
-* Predikat -> Finite Domain CP -> Generator
+* Predicate -> Finite Domain CP -> Generator
 
 * JS backend
 
-* Godtyckligt protokolltyp (Protocol Buffers etc.)
+* Combined syntax for SessionTypes + Predicates
 
-* Kombinerad syntax för ST + Predikat
+* Polymorphic session types
 
-* Polymorfiska session types
+* Tesing monadic code at the same time as testing protocols, maybe?
 
-* Kombination av session types med refinement + testning av monadisk kod i ST monaden?
+* Linear logic in the predicate language, it would be good to have
+  a concept of limited resources. One simple example is a web-shop
+  where you enter a coupon with say, 100kr on it.
+
+* FTP / SMTP

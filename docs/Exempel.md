@@ -1,10 +1,13 @@
 # Exempel
 
-* Basic exempel i Haskell
+* Very basic example in haskell
 
-* Spel - Labyrint
-    * Grafik, visa test "in real time"
+* Steal examples from old papers
 
-* Knycka exempel!
+* Motivating example
 
-* Motiverande exempel!
+* Run with erlang
+
+* Game - Labyrinth
+    * Graphcs?
+    * Linear logic?
