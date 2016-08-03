@@ -1,5 +1,9 @@
 # Exempel
 
+* Pizza example
+    * Actually write an implementation to
+      test!
+
 * Very basic example in haskell
 
 * Steal examples from old papers

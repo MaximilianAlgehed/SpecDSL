@@ -8,25 +8,6 @@ ST = Session Types
       simpler.
 
 * Predicates -> DSL
-    * We need to base this DSL
-      on some type of temporal
-      logic like LTL.
-      Testing is then a case of
-      verifiying that
-      log |= predicate.
-    * The DSL needs to support a slew of high-level
-      features to make sure that you don't have to write
-      p -> (~q U (q & r)) to express:
-      "The first thing that satisfies q after p also
-      satisfies r"
-    * The DSL needs to support some basic scoping and
-      quantification. It needs to be possible to refer
-      to the same object in one state as in a future state.
-      An example of what we would like to be able to express
-      is:
-        G (Atomic isBookOrder ==> (U (Not isShoppingBasket) (isShoppingBasket & containsBook x)))
-      Where x is bound when observing isBookOrder to the book
-      that was ordered.
 
 * Custom Generators DSL
     * Should just be a case of supplying something
