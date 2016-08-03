@@ -1,4 +1,4 @@
-{-# LANGUAGE MultiParamTypeClasses #-}
+{-# LANGUAGE MultiParamTypeClasses, FlexibleContexts #-}
 module PizzaExample where
 
 import Debug.Trace
@@ -58,8 +58,8 @@ instance Checks TypeUniverse Unitype where
     check _ _           = False
 
 -- | The type for ordering pizza
-pizzaOrder :: SessionType TypeUniverse
-pizzaOrder = (!)H :. addItem :. (pizzaOrder :| finalizeOrder) :. end
+pizzaSessionType :: SessionType TypeUniverse
+pizzaSessionType = (!)H :. addItem :. (pizzaSessionType :| finalizeOrder) :. end
     where
         addItem = addPizza :| addSalad
         addPizza = pizzaToppings
@@ -94,3 +94,34 @@ pizzaPredicate = G $ ((Not isPizzaTopping) .& (X (X isPizzaTopping))) .=> X (X (
                                             _                                -> Bottom
                                         )
         isIn lst pas = or [sort lst == sort [x | PiTp x <-  pizza] | Eith (Left (Lst pizza)) <- pas]
+
+-- | A pizza serving server
+pizzaServer :: P Chan (Protocol Unitype) -> IO ()
+pizzaServer ch = loop []
+    where
+        loop orders = do
+                        get ch
+                        choice <- get ch
+                        case choice of
+                            ChooseLeft  -> makeMeal [] >>= (\pizza -> maybeLoop (Eith (Left (Lst pizza)):orders))
+                            ChooseRight -> makeMeal [] >>= (\salad -> maybeLoop (Eith (Right (Lst salad)):orders))
+        makeMeal ingredients = do
+                                    (Pure top) <- get ch
+                                    choice <- get ch
+                                    case choice of
+                                        ChooseLeft -> makeMeal (top:ingredients)
+                                        ChooseRight -> do
+                                                        get ch
+                                                        return (top:ingredients)
+        maybeLoop lst = do
+                           choice <- get ch 
+                           case choice of
+                                ChooseLeft -> loop lst
+                                ChooseRight -> do
+                                                put ch $ Pure $ Lst lst 
+                                                put ch $ Pure $ Int 1000
+                                                get ch
+                                                get ch
+                                                return ()
+
+testPizzaServer = quickTest pizzaServer pizzaSessionType pizzaPredicate
