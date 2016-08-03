@@ -78,18 +78,18 @@ pizzaOrder = (!)H :. addItem :. (pizzaOrder :| finalizeOrder) :. end
 -- | The pizza predicate,
 -- | "if I order a pizza, it will be in the list of pizzas at the end"
 pizzaPredicate :: LTL (Interaction (Protocol Unitype))
-pizzaPredicate = G $ (Not isPizzaTopping) .& (X isPizzaTopping) .& (X (pizzaToppingList []))
+pizzaPredicate = G $ ((Not isPizzaTopping) .& (X isPizzaTopping)) .=> X (pizzaToppingList [])
     where
         isPizzaTopping = Atomic (\message -> case message of
                                     Sent (Pure (PiTp _)) -> Top
                                     _                    -> Bottom
                                 )
         pizzaToppingList lst = Atomic (\message -> case message of
-                                        Sent (Pure (PiTp t)) -> pizzaToppingList (t:lst)
-                                        _                    -> F $ myPizzaIsInTheList lst
+                                            Sent (Pure (PiTp t)) -> X $ X $ pizzaToppingList (t:lst)
+                                            _                    -> F $ myPizzaIsInTheList lst
                                       )
         myPizzaIsInTheList lst = Atomic (\message -> case message of
                                             Got (Pure (Lst pizzasAndSalads)) -> fromBool (lst `isIn` pizzasAndSalads)
                                             _                                -> Bottom
                                         )
-        isIn lst pas = or [(sort lst) == (sort ([x | PiTp x <-  pizza])) | Eith (Left (Lst pizza)) <- pas]
+        isIn lst pas = or [sort lst == sort [x | PiTp x <-  pizza] | Eith (Left (Lst pizza)) <- pas]

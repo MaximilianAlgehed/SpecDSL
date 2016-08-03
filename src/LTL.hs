@@ -19,7 +19,7 @@ check :: LTL domain -> [domain] -> Bool
 check Top        _      = True
 check Bottom     _      = False
 check Terminated []     = True
-check (Atomic f) (x:xs) = check (f x) xs
+check (Atomic f) (x:xs) = check (f x) (x:xs)
 check (And l r) xs      = check l xs && check r xs
 check (Not ltl) xs      = not $ check ltl xs
 check (X ltl) (_:xs)    = check ltl xs
@@ -42,5 +42,6 @@ a .| b = Not (And (Not a) (Not b))
 a = Atomic
 boolP p = Atomic (\x -> if p x then Top else Bottom)
 b ===> ltl = if b then ltl else Top
+a .=> b = (Not a) .| b
 fromBool True = Top
 fromBool False = Bottom
