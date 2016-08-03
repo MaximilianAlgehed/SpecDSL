@@ -1,6 +1,7 @@
 {-# LANGUAGE MultiParamTypeClasses #-}
 module PizzaExample where
 
+import Debug.Trace
 import Data.List
 import Control.Concurrent
 import Control.Concurrent.Chan
@@ -78,7 +79,7 @@ pizzaOrder = (!)H :. addItem :. (pizzaOrder :| finalizeOrder) :. end
 -- | The pizza predicate,
 -- | "if I order a pizza, it will be in the list of pizzas at the end"
 pizzaPredicate :: LTL (Interaction (Protocol Unitype))
-pizzaPredicate = G $ ((Not isPizzaTopping) .& (X isPizzaTopping)) .=> X (pizzaToppingList [])
+pizzaPredicate = G $ ((Not isPizzaTopping) .& (X (X isPizzaTopping))) .=> X (X (pizzaToppingList []))
     where
         isPizzaTopping = Atomic (\message -> case message of
                                     Sent (Pure (PiTp _)) -> Top
