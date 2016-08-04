@@ -22,6 +22,7 @@ class BiChannel ch t where
     get :: ch (Protocol t) -> IO (Protocol t)
     bidirect :: ch (Protocol t) -> ch (Protocol t)
     kill :: ch (Protocol t) -> IO ()
+    waitToBeKilled :: ch (Protocol t) -> IO ()
 
 instance BiChannel (P Chan) a where
     new = do
@@ -33,3 +34,4 @@ instance BiChannel (P Chan) a where
     get (P cin _ _) = readChan cin
     bidirect (P cin cout exit_chan) = P cout cin exit_chan
     kill (P _ _ exit_chan) = writeChan exit_chan ()
+    waitToBeKilled (P _ _ exit_chan) = readChan exit_chan
