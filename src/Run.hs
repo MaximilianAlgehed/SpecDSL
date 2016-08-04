@@ -88,6 +88,7 @@ quickTest impl t pred = loop 1000
                     ch <- new
                     forkIO $ impl (bidirect ch)
                     b <- test t ch pred
+                    kill ch
                     if b then
                         loop (n-1)
                     else

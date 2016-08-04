@@ -41,4 +41,4 @@ simplePredicate = Atomic (\(Sent (Pure (ErlInt i))) ->
                                  )
                          )
 
-testSimpleErlang = quickTest (runErlang "simpleErlangExample" "main") simpleSessionType simplePredicate
+testSimpleErlang = runErlang "simpleErlangExample" "main" simpleSessionType simplePredicate
