@@ -4,6 +4,7 @@ import Control.Concurrent.Chan
 import System.Process
 import Model
 import Foreign.Erlang
+import Debug.Trace
 
 -- | So that we can talk to Erlang!
 instance (Erlang t) => Erlang (Protocol t) where
@@ -22,9 +23,9 @@ runErlang :: (Erlang r)
           -> IO ()
 runErlang mod fun ch =
     do
-        (_, _, _, pid) <- createProcess $ (shell $ "erl -name \"erl@127.0.0.1\" -run "++mod++" "++fun) {std_out = NoStream}
-        self <- createSelf "haskell@localhost"
+        self <- createSelf "haskell@x201"
         mbox <- createMBox self
+        forkIO $ rpcCall mbox (Short "erl") mod fun [] >> return ()
         id1 <- forkIO $ erlangLoop ch mbox
         id2 <- forkIO $ haskellLoop ch mbox
         waitToBeKilled ch >> (finish () id1 id2)
