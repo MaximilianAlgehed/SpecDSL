@@ -53,6 +53,7 @@ test :: (Implements r t, Checks t r, BiChannel ch r, Show r) =>
     IO Bool
 test t ch pred = do
                     (b, logs) <- runWriterT (checkProtocolCompliance t ch)
+                    kill ch
                     if not b then
                         do
                             hPutStr stderr "\r                               \r"
