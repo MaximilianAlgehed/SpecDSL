@@ -12,23 +12,6 @@ import JSONType
 import Model
 import qualified LTL as LTL
 
-data P a x = P (a x) (a x)
-
-class BiChannel ch t where
-    new :: IO (ch (Protocol t))
-    put :: ch (Protocol t) -> Protocol t -> IO ()
-    get :: ch (Protocol t) -> IO (Protocol t)
-    bidirect :: ch (Protocol t) -> ch (Protocol t)
-
-instance BiChannel (P Chan) a where
-    new = do
-            cin <- newChan
-            cout <- newChan
-            return $ P cin cout
-    put (P cin cout) = writeChan cout
-    get (P cin cout) = readChan cin
-    bidirect (P cin cout) = P cout cin
-
 -- Checks that a BiChannel implements the protocol given by
 -- a session type by testing it against a random trace that conforms
 -- to the type, and produces a log of the interaction.
