@@ -1,6 +1,7 @@
 # Exempel
 
-* Pizza example
+* Pizza example,
+  in erlang!
 
 * Very basic example in haskell
 

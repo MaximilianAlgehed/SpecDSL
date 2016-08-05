@@ -12,6 +12,7 @@ import SessionTypes hiding (B, L, R)
 import JSONType
 import LTL hiding (check)
 import Run
+import Erlang
 
 -- | Pizza toppings datatype
 data PizzaToppings = Ham | Cheese | Mushrooms | Olives | Shrimps deriving (Show, Eq, Ord, Enum)

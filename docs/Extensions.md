@@ -18,3 +18,6 @@
 * Linear logic in the predicate language, it would be good to have
   a concept of limited resources. One simple example is a web-shop
   where you enter a coupon with say, 100kr on it.
+
+* Automatic translation of haskell types to erlang types,
+  to make the syntax for LTL slightly nicer?
