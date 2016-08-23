@@ -12,25 +12,23 @@ import qualified LTL as LTL
 
 -- | So that we can talk to Erlang!
 instance (Erlang t) => Erlang (Protocol t) where
-    toErlang (Pure t) = ErlTuple [ErlAtom "pure", toErlang t]
-    toErlang ChooseLeft = ErlAtom "chooseLeft"
+    toErlang (Pure t)    = ErlTuple [ErlAtom "pure", toErlang t]
+    toErlang ChooseLeft  = ErlAtom "chooseLeft"
     toErlang ChooseRight = ErlAtom "chooseRight"
 
     fromErlang (ErlTuple [ErlAtom "pure", t]) = Pure (fromErlang t)
-    fromErlang (ErlAtom "chooseLeft") = ChooseLeft
-    fromErlang (ErlAtom "chooseRight") = ChooseRight
-    fromErlang x                        = trace (show x) undefined
+    fromErlang (ErlAtom "chooseLeft")         = ChooseLeft
+    fromErlang (ErlAtom "chooseRight")        = ChooseRight
+    fromErlang x                              = trace (show x) undefined
 
 runErlang :: (Erlang r, Implements r t, Show r, Checks t r)
-          => String -- module name
+          => Self -- Created by "createSelf \"name@localhost\""
+          -> String -- module name
           -> String -- function name
           -> SessionType t -- The session type for the interaction
           -> LTL.LTL (Interaction (Protocol r)) -- The LTL predicate
           -> IO ()
-runErlang mod fun st ltl =
-    do
-        self <- createSelf "haskell@localhost"
-        quickTest (runfun self) st ltl
+runErlang self mod fun st ltl = quickTest (runfun self) st ltl
     where
         runfun :: (Erlang r) => Self -> P Chan (Protocol r) -> IO ()
         runfun self ch =
