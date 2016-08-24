@@ -1,0 +1,130 @@
+\documentclass{beamer}
+
+\mode<presentation> {
+
+\usetheme{Madrid}
+
+\setbeamertemplate{footline} % To remove the footer line in all slides uncomment this line
+
+\setbeamertemplate{navigation symbols}{} % To remove the navigation symbols from the bottom of all slides uncomment this line
+}
+
+\usepackage{minted} % syntax highlighting for haskell expressions
+\usepackage[nounderscore]{syntax}
+\usepackage{graphicx} % Allows including images
+\usepackage[utf8]{inputenc}
+
+%----------------------------------------------------------------------------------------
+%	TITLE PAGE
+%----------------------------------------------------------------------------------------
+
+\title[SpecDSL]{SpecDSL \\ \large{Session types + LTL = QuickCheck}}
+
+\author{Maximilian Algehed} % Your name
+\institute[CTH] % Your institution as it will appear on the bottom of every slide, may be shorthand to save space
+{
+Chalmers University of Technology \\ % Your institution for the title page
+\medskip
+\textit{m.algehed@gmail.com} % Your email address
+}
+\date{\today} % Date, can be changed to a custom date
+
+\begin{document}
+
+\begin{frame}
+    \titlepage % Print the title page as the first slide
+\end{frame}
+
+\begin{frame}
+    \frametitle{Motivating scenario}
+    \begin{columns}
+        \column{0.15\textwidth}
+        \begin{block}{Server}
+            \small{Maybe typed}
+        \end{block}
+
+        \column{0.1\textwidth}
+        \\
+        \centerline{TCP}
+        \centerline{\Large{$\implies$}}
+        \centerline{\Large{$\impliedby$}}
+        \centerline{Definately not typed}
+
+        \column{0.15\textwidth}
+        \begin{block}{Client}
+            \small{Javascript: Definately not typed}
+        \end{block}
+        
+    \end{columns}
+\end{frame}
+
+\begin{frame}
+    \frametitle{What we want}
+    \centering
+    \Large{Property based testing, of course!}
+\end{frame}
+
+\begin{frame}
+    \frametitle{Communication}
+    \Large{A problem in two parts}
+    \begin{itemize}
+        \item How is the communication happening?
+        \item How do the parties behave?
+    \end{itemize}
+\end{frame}
+
+\begin{frame}[fragile]
+    \frametitle{Session Types, but quickly!}
+    \large{Simplified GV calculus}
+    \\
+    \begin{grammar}
+        <T> ::= Any serializable type
+
+        <S> ::= !<T> | ?<T> | <S>.<S> | <S> $\wedge$ <S> | <S> $\vee$ <S> | $end$
+    \end{grammar}
+\end{frame}
+
+\begin{frame}[fragile]
+    \frametitle{Example}
+    \Large{$client = !ISBN.(client \vee ?Cost.!CreditCardNr).end$}
+\end{frame}
+
+\begin{frame}
+    \frametitle{Communication}
+    \Large{A problem in two parts}
+    \begin{itemize}
+        \item How is the communication happening? Session Types!
+        \item How do the parties behave?
+    \end{itemize}
+\end{frame}
+
+\begin{frame}[fragile]
+    \frametitle{Session Types as a DSL}
+    \large{Session types in Haskell}
+    \\
+    \begin{minted}{haskell}
+data ST tu = Send tu
+           | Get  tu
+           | (ST tu) :. (ST tu)
+           | (ST tu) :& (ST tu)
+           | (ST tu) :| (ST tu)
+           | End
+    \end{minted}
+    \pause
+    But what happened to the \textit{type} bit?
+\end{frame}
+
+\begin{frame}
+    \frametitle{Summary}
+    \begin{itemize}
+        \item Session Types provide a natural DSL for communication
+        \item LTL lets us have nice properties
+        \item Put them togeather and we get QuickCheck for Client-Server communication
+    \end{itemize}
+\end{frame}
+
+\begin{frame}
+    \Huge{\centerline{Questions?}}
+\end{frame}
+
+\end{document} 
