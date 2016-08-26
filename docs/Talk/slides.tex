@@ -62,12 +62,11 @@ Chalmers University of Technology \\ % Your institution for the title page
     \frametitle{What we want}
     \centering
     \Large{Property based testing, of course!}
-    \pause
-    \Large{DSL for specification}
 \end{frame}
 
 \begin{frame}
-    \frametitle{Communication}
+    \frametitle{A DSL for specifying communication}
+    \centering
     \Large{A problem in two parts}
     \begin{itemize}
         \item How is the communication happening?
@@ -88,28 +87,39 @@ Chalmers University of Technology \\ % Your institution for the title page
 
 \begin{frame}[fragile]
     \frametitle{Example}
-    \Large{$client = !ISBN.(client \vee ?Cost.!CreditCardNr).end$}
+    \Large{$client = !ISBN.(client \vee (?Cost.!CreditCardNr)).end$}
+    \\~\\
+    \large{$server = \overline{client} = ?ISBN.(client \wedge (!Cost.?CreditCardNr)).end$}
 \end{frame}
 
 \begin{frame}
-    \frametitle{Communication}
+    \frametitle{A DSL for specifying communication}
+    \centering
     \Large{A problem in two parts}
     \begin{itemize}
-        \item How is the communication happening? Session Types!
+        \item How is the communication happening?
         \item How do the parties behave?
     \end{itemize}
 \end{frame}
 
 \begin{frame}[fragile]
     \frametitle{Linear Temporal Logic, LTL}
+    \begin{grammar}
+        <$\phi$> ::= p | $\top$ | $\bot$ | $\neg$$\phi$ | $\phi\wedge\phi$ | $X\phi$ | $G\phi$ | $\phi U \phi$ 
+    \end{grammar}
+\end{frame}
+
+\begin{frame}[fragile]
+    \frametitle{LTL semantics}
 \end{frame}
 
 \begin{frame}
-    \frametitle{Communication}
+    \frametitle{A DSL for specifying communication}
+    \centering
     \Large{A problem in two parts}
     \begin{itemize}
-        \item How is the communication happening? Session Types!
-        \item How do the parties behave? LTL!
+        \item How is the communication happening?
+        \item How do the parties behave?
     \end{itemize}
 \end{frame}
 
@@ -127,6 +137,32 @@ data ST tu = Send tu
     \end{minted}
     \pause
     But what happened to the \textit{type} bit?
+\end{frame}
+
+\begin{frame}[fragile]
+    \frametitle{LTL as a DSL}
+    \centering
+    Shallow
+    \begin{minted}{haskell}
+type LTL a = [a] -> Bool
+    \end{minted}
+    \pause
+    \centering
+    Deep
+    \begin{minted}{haskell}
+data LTL a = Atomic (a -> LTL a)
+           | Top 
+           | Bottom
+           | (LTL a) And (LTL a)
+           | Not (LTL a)
+           | X (LTL a)
+           | G (LTL a)
+           | (LTL a) U (LTL a)
+           | Terminated
+
+check :: LTL a -> [a] -> Bool
+check = ...
+    \end{minted}
 \end{frame}
 
 \begin{frame}
