@@ -33,16 +33,16 @@ checkProtocolCompliance st ch = lift (generate (implementTrace st)) >>= runHelpe
                                                       else
                                                         return False
                                             _      -> return False
-        runHelper (Branch (Just (l, r))) = do
+        runHelper (Branch (l, r))    = do
                                         x <- lift $ get ch
                                         tell [(Got x)]
                                         case x of
                                             ChooseLeft  -> runHelper l
                                             ChooseRight -> runHelper r
                                             _           -> return False
-        runHelper (Choose L (Just tr)) = lift (put ch ChooseLeft) >> tell [(Sent ChooseLeft)] >> runHelper tr
-        runHelper (Choose R (Just tr)) = lift (put ch ChooseRight) >> tell [(Sent ChooseRight)] >> runHelper tr
-        runHelper _                    = return False
+        runHelper (Choose L tr)      = lift (put ch ChooseLeft) >> tell [(Sent ChooseLeft)] >> runHelper tr
+        runHelper (Choose R tr)      = lift (put ch ChooseRight) >> tell [(Sent ChooseRight)] >> runHelper tr
+        runHelper _                  = return False
 
 -- | Test if a channel implements a session type
 -- | and a predicate in LTL holds for the interaction

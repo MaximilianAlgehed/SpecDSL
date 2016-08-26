@@ -125,4 +125,19 @@ pizzaServer ch = loop []
                                                 get ch
                                                 return ()
 
+pizzaClient :: P Chan (Protocol Unitype) -> IO ()
+pizzaClient ch = do
+                    put ch (Pure Hello)
+                    put ch ChooseLeft
+                    put ch (Pure (PiTp Ham))
+                    put ch ChooseRight
+                    put ch (Pure Done)
+                    put ch ChooseRight
+                    get ch
+                    get ch
+                    put ch (Pure (String ""))
+                    put ch (Pure (Int 0))
+
 testPizzaServer = quickTest pizzaServer pizzaSessionType pizzaPredicate
+
+testPizzaClient = quickTest pizzaClient (dual pizzaSessionType) Top

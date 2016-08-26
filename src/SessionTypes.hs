@@ -16,35 +16,32 @@ data SessionType t = B t -- Send something
 -- | Go left or go right
 data Choice = L | R deriving (Show)
 
-data Trace t t'  = Send t (Maybe (Trace t t'))
-                 | Recv t' (Maybe (Trace t t'))
-                 | Branch (Maybe (Trace t t', Trace t t'))
-                 | Choose Choice (Maybe (Trace t t'))
-                 | Terminate
-                 deriving (Show, Functor)
+data Trace t t' = Send t (Maybe (Trace t t'))
+                | Recv t' (Maybe (Trace t t'))
+                | Branch (Trace t t', Trace t t')
+                | Choose Choice (Trace t t')
+                | Terminate
+                deriving (Show, Functor)
 
 appendTrace :: Trace t t' -> Trace t t' -> Trace t t'
-appendTrace Terminate _                = Terminate
-appendTrace (Send t Nothing) tr        = Send t $ Just tr
-appendTrace (Send t (Just tr)) tr'     = Send t $ Just $ tr `appendTrace` tr'
-appendTrace (Branch Nothing) tr        = Branch $ Just (tr, tr)
-appendTrace (Branch (Just (t, t'))) tr = Branch $ Just (t `appendTrace` tr, t' `appendTrace` tr)
-appendTrace (Choose c Nothing) tr      = Choose c $ Just tr
-appendTrace (Choose c (Just t)) tr     = Choose c $ Just $ t `appendTrace` tr
-appendTrace (Recv x Nothing) tr        = Recv x $ Just tr
-appendTrace (Recv x (Just t)) tr       = Recv x $ Just $ t `appendTrace` tr
+appendTrace Terminate _            = Terminate
+appendTrace (Send t Nothing) tr    = Send t $ Just tr
+appendTrace (Send t (Just tr)) tr' = Send t $ Just $ tr `appendTrace` tr'
+appendTrace (Branch (t, t')) tr    = Branch $ (t `appendTrace` tr, t' `appendTrace` tr)
+appendTrace (Choose c t) tr        = Choose c $ t `appendTrace` tr
+appendTrace (Recv x Nothing) tr    = Recv x $ Just tr
+appendTrace (Recv x (Just t)) tr   = Recv x $ Just $ t `appendTrace` tr
 
--- | This function is buggy at the moment, it does not work branches
 implementTrace :: (Implements t t') => SessionType t' -> Gen (Trace t t') 
 implementTrace (B t)       = do
                                 t' <- implement t
                                 return $ Send t' Nothing 
 implementTrace (Q t)       = return $ Recv t $ Nothing
-implementTrace (st :| st') = oneof $ [fmap ((Choose L) . Just) (implementTrace st), fmap ((Choose R) . Just) (implementTrace st')]
+implementTrace (st :| st') = oneof $ [fmap (Choose L) (implementTrace st), fmap (Choose R) (implementTrace st')]
 implementTrace (st :& st') = do
                                 t  <- implementTrace st
                                 t' <- implementTrace st'
-                                return $ Branch $ Just (t, t')
+                                return $ Branch (t, t')
 implementTrace (st :. st') = do
                                 t  <- implementTrace st
                                 t' <- implementTrace st'
