@@ -59,6 +59,23 @@ Chalmers University of Technology \\ % Your institution for the title page
 \end{frame}
 
 \begin{frame}
+    \frametitle{Preliminaries}
+    \Large{What this talk is about}
+    \begin{itemize}
+        \item Testing protocol implementations
+        \item Extracting DSLs from logic
+    \end{itemize}
+    \pause
+    \Large{What this talk is \emph{not} about}
+    \begin{itemize}
+        \item Haskell
+        \item Clever type theory (sorry!)
+        \item Logic
+    \end{itemize}
+\end{frame}
+
+
+\begin{frame}
     \frametitle{What we want}
     \centering
     \Large{Property based testing, of course!}
@@ -97,7 +114,7 @@ Chalmers University of Technology \\ % Your institution for the title page
     \centering
     \Large{A problem in two parts}
     \begin{itemize}
-        \item How is the communication happening?
+        \item How is the communication happening? Session Types!
         \item How do the parties behave?
     \end{itemize}
 \end{frame}
@@ -118,8 +135,8 @@ Chalmers University of Technology \\ % Your institution for the title page
     \centering
     \Large{A problem in two parts}
     \begin{itemize}
-        \item How is the communication happening?
-        \item How do the parties behave?
+        \item How is the communication happening? Session Types
+        \item How do the parties behave? LTL!
     \end{itemize}
 \end{frame}
 
@@ -166,6 +183,49 @@ check = ...
 \end{frame}
 
 \begin{frame}
+    \frametitle{Demo!}
+    \Large{That's quite enough background, demo time!}
+\end{frame}
+
+\begin{frame}[fragile]
+    \frametitle{OK, so how does it work?}
+    \centering
+    \Large{Communication}
+    \small{
+    \begin{minted}{haskell}
+data Choice = L | R
+
+data Trace tu ut = Terminate
+                 | Send ut
+                 | Get tu
+                 | Br (Trace tu ut) (Trace tu ut)
+                 | Ch Choice (Trace tu ut)
+
+type Implementation tu = SessionType tu -> Gen (Trace tu ut)
+
+type Checker = tu -> ut -> Bool
+    \end{minted}
+}
+\end{frame}
+
+\begin{frame}[fragile]
+    \frametitle{OK, so how does it work?}
+    \centering
+    \Large{Communication}
+    \begin{minted}{haskell}
+data Protocol a = Pure a
+                | ChooseLeft
+                | ChooseRight
+    \end{minted}
+    \begin{minted}{haskell}
+class BiCh ch a where
+    newCh :: IO (ch a)
+    putCh :: ch a -> Protocol a -> IO ()
+    getCh :: ch a -> IO (Protocol a)
+    \end{minted}
+\end{frame}
+
+\begin{frame}
     \frametitle{Summary}
     \begin{itemize}
         \item Session Types provide a natural DSL for communication
@@ -174,6 +234,14 @@ check = ...
     \end{itemize}
 \end{frame}
 
+\begin{frame}
+    \frametitle{Future work}
+    \begin{itemize}
+        \item Shrinking
+        \item Distributed systems
+        \item Paper...
+    \end{itemize}
+\end{frame}
 \begin{frame}
     \Huge{\centerline{Questions?}}
 \end{frame}
