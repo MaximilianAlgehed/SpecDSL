@@ -189,8 +189,6 @@ check = ...
 
 \begin{frame}[fragile]
     \frametitle{OK, so how does it work?}
-    \centering
-    \Large{Behaviour}
     \small{
     \begin{minted}{haskell}
 data Choice = L | R
@@ -210,14 +208,11 @@ type Checker tu ut = tu -> ut -> Bool
 
 \begin{frame}[fragile]
     \frametitle{OK, so how does it work?}
-    \centering
-    \Large{Communication}
     \begin{minted}{haskell}
 data Protocol a = Pure a
                 | ChooseLeft
                 | ChooseRight
-    \end{minted}
-    \begin{minted}{haskell}
+
 class BiCh ch a where
     newCh :: IO (ch a)
     putCh :: ch a -> Protocol a -> IO ()
@@ -227,11 +222,18 @@ class BiCh ch a where
 
 \begin{frame}[fragile]
     \frametitle{Ok, so how does it work?}
-    \centering
-    \Large{Testing}
     \begin{minted}{haskell}
 data Interaction t = Got t | Sent t
 type Log t = [Interaction (Protocol t)]
+
+sessionTest
+    :: BiCh ch tu
+    => Implementation tu ut
+    -> Checker tu ut
+    -> (ch (Protocol tu) -> IO ())
+    -> SessionType tu
+    -> LTL (Interaction (Protocol t))
+    -> IO Bool
     \end{minted}
 \end{frame}
 
