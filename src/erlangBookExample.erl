@@ -13,8 +13,8 @@ loop(XS) ->
 
 continue(I, XS) ->
     Lst = (if
-                I > 0 -> [I|XS];
-                true  -> [XS]
+               %I > 0 -> [I|XS];
+                true  -> [I|XS]
            end),
     receive 
         {_, chooseLeft} -> loop(Lst);
@@ -25,4 +25,7 @@ finish(XS) ->
     receive 
         {Hs, {pure, requestBasket}} -> Hs ! {pure, {yourBasket, XS}}
     end,
-    exit(done).
+    receive
+        {_, chooseLeft} -> loop(XS);
+        {_, chooseRight} -> exit(done)
+    end.

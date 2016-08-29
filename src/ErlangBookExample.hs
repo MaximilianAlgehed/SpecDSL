@@ -44,7 +44,7 @@ instance Erlang Shopping where
 
 -- | The session type for an interaction in our magical book store
 bookShopClient :: SessionType ShoppingType
-bookShopClient = (!)B :. (bookShopClient :| ((!)RB :. (?)YB)) :. end
+bookShopClient = (!)B :. (bookShopClient :| ((!)RB :. (?)YB)) :. (bookShopClient :| end)
 
 -- | A predicate that says that IF I add a book to the shopping basket,
 -- I will see that book in the basket when I request to see my basket

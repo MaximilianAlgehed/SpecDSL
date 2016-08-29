@@ -18,7 +18,7 @@
 %	TITLE PAGE
 %----------------------------------------------------------------------------------------
 
-\title[SpecDSL]{SpecDSL \\ \large{Session types + LTL = QuickCheck}}
+\title[Logical Plumbing]{Logical Plumbing  \\ \large{Session types + LTL = QuickCheck}}
 
 \author{Maximilian Algehed} % Your name
 \institute[CTH] % Your institution as it will appear on the bottom of every slide, may be shorthand to save space
@@ -106,7 +106,7 @@ Chalmers University of Technology \\ % Your institution for the title page
     \frametitle{Example}
     \Large{$client = !ISBN.(client \vee (?Cost.!CreditCardNr)).end$}
     \\~\\
-    \large{$server = \overline{client} = ?ISBN.(client \wedge (!Cost.?CreditCardNr)).end$}
+    \large{$server = \overline{client} = ?ISBN.(\overline{client} \wedge (!Cost.?CreditCardNr)).end$}
 \end{frame}
 
 \begin{frame}
@@ -178,7 +178,6 @@ data LTL a = Atomic (a -> LTL a)
            | Terminated
 
 check :: LTL a -> [a] -> Bool
-check = ...
     \end{minted}
 \end{frame}
 
