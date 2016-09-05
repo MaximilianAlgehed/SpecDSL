@@ -154,6 +154,10 @@ data ST tu = Send tu
     \end{minted}
     \pause
     But what happened to the \textit{type} bit?
+    \begin{minted}{haskell}
+type Behaviour tu ut = ...
+interperate :: ST tu -> Gen (Behaviour tu ut)
+    \end{minted}
 \end{frame}
 
 \begin{frame}[fragile]
@@ -248,9 +252,10 @@ sessionTest
 \begin{frame}
     \frametitle{Future work}
     \begin{itemize}
-        \item Shrinking
+        \item QuickCheck style shrinking
+        \item Polymorphic session types
         \item Distributed systems
-        \item Paper...
+        \item Write the paper...
     \end{itemize}
 \end{frame}
 \begin{frame}
