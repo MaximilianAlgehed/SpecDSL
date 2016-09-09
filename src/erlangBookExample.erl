@@ -13,8 +13,8 @@ loop(XS) ->
 
 continue(I, XS) ->
     Lst = (if
-               %I > 0 -> [I|XS];
-                true  -> [I|XS]
+                I > 0 -> [I|XS];
+                true  -> XS
            end),
     receive 
         {_, chooseLeft} -> loop(Lst);
