@@ -1,17 +1,30 @@
-{-# LANGUAGE DeriveFunctor, FlexibleInstances, MultiParamTypeClasses #-}
+{-# LANGUAGE DeriveFunctor, FlexibleInstances, MultiParamTypeClasses, GADTs#-}
 module SessionTypes where
 import Test.QuickCheck
 import Typeclasses
 
 -- | Session type parameterized over some
 -- | type universe t
-data SessionType t = B t -- Send something
-                   | Q t -- Get something
-                   | (SessionType t) :& (SessionType t) -- Branch
-                   | (SessionType t) :| (SessionType t) -- Choice
-                   | (SessionType t) :. (SessionType t) -- Composition
-                   | End -- Termination
-                   deriving (Show, Eq, Functor)
+data SessionType tu ut = B tu (Gen ut) (ut -> SessionType tu ut)  -- Send something
+                       | Q tu (ut -> SessionType                                     -- Get something
+                       | (SessionType t) :& (SessionType t)       -- Branch
+                       | (SessionType t) :| (SessionType t)       -- Choice
+                       | End                                      -- Termination
+                       deriving (Show, Eq, Functor)
+
+{- Some possible interpertations of ST -}
+data ST tu ut where
+    B :: tu
+      -> (tu -> Gen tu)
+      -> (ut -> SessionType tu ut) -- The session type is now dependent _and_ polymorphic! This is probably bad
+      -> ST tu ut
+    Q :: tu ->  
+
+data ST a where
+    B :: Gen a
+      -> (a -> ST b) -- Now it's even MORE polymorphic!
+      -> ST a
+    Q :: (a -> ST b)
 
 -- | Go left or go right
 data Choice = L | R deriving (Show)
