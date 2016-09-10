@@ -7,7 +7,6 @@ module LTL where
 -}
 
 -- LTL defined by a set of adequate connectives
--- This is the minimal definition of LTL
 data LTL domain = Atomic (domain -> LTL domain)
                 | Top
                 | Bottom
