@@ -15,6 +15,11 @@ data (a :~ b) where
     Set   :: (P.Ord a) => RSet a -> (a :~ a) 
     Chain :: (P.Ord a, P.Ord b, P.Ord c) => (b :-> c) -> (a :~ b) -> (a :~ c)
 
+infixr $$
+infixr $!
+
+elem = Pred
+
 ($$) :: (P.Ord a, P.Ord b, P.Ord c) => (b :-> c) -> (a :~ b) -> (a :~ c)
 ($$) = Chain
 
@@ -26,8 +31,14 @@ p $! (Chain f v) = Pred (inverse f (image p)) $! v
 (...) :: (P.Ord a, P.Enum a) => a -> a -> RSet a
 l...h = singletonRange (l, h)
 
-times :: (P.Fractional a, P.Ord a, P.Enum a) => a -> a :-> a
-times x = Func P.$ mapMonotonic (P./x)
+multiply :: (P.Fractional a, P.Ord a, P.Enum a) => a -> a :-> a
+multiply x = Func P.$ mapMonotonic (P./x)
 
 divide :: (P.Fractional a, P.Ord a, P.Enum a) => a -> a :-> a
 divide x = Func P.$ mapMonotonic (P.*x)
+
+add :: (P.Num a, P.Ord a, P.Enum a) => a -> a :-> a
+add x = Func P.$ mapMonotonic (P.-x)
+
+subtract :: (P.Num a, P.Ord a, P.Enum a) => a -> a :-> a
+subtract x = Func P.$ mapMonotonic (P.-x)

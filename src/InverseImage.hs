@@ -1,15 +1,27 @@
 {-# LANGUAGE TemplateHaskell #-}
 import qualified Prelude as P
 import Language.Haskell.TH
+import Test.Feat
+import Test.Feat.Enumerate
 
 data Nat = Z | S Nat deriving P.Show
+
+instance Enumerable Nat where
+    enumerate = consts [nullary Z, unary S]
 
 data Bool = True | False deriving P.Show
 
 eq :: Nat -> Nat -> Bool
 eq Z Z         = True
 eq (S l) (S r) = eq l r
-eq _     _     = False
+eq (S x) Z     = False
+eq Z     (S x) = False
+
+eqIItrue Z     = consts [nullary Z]
+eqIItrue (S x) = pay (P.fmap S (eqIItrue x))
+
+eqIIfalse Z     = P.fmap S enumerate
+eqIIfalse (S x) = (consts [nullary Z]) `union` (pay (P.fmap S (eqIIfalse x)))
 
 {-
  - eqII True (S (S (S Z))) = S <$> eqII (S (S Z))
@@ -25,10 +37,18 @@ lt Z _         = False
 lt (S _) Z     = True
 lt (S l) (S r) = lt l r
 
+ltIItrue :: Nat -> Enumerate Nat
+ltIItrue Z     = fromParts [] 
+ltIItrue (S x) = (consts [nullary Z]) `union` (pay (P.fmap S (ltIItrue x)))
+
+ltIIfalse :: Nat -> Enumerate Nat
+ltIIfalse Z     = enumerate
+ltIIfalse (S x) = (pay (P.fmap S (ltIIfalse x)))
+
 {-
- - ltII True (S (S (S Z))) = Z <|> S <$> ltII (S (S Z))
- -                         = Z <|> S <$> Z <|> S <$> ltII (S Z)
- -                         = Z <|> S <$> Z <|> S <$> Z <|> ltII Z
+ - ltII True (S (S (S Z))) = Z <|> S <$> ltII True (S (S Z))
+ -                         = Z <|> S <$> Z <|> S <$> ltII True (S Z)
+ -                         = Z <|> S <$> Z <|> S <$> Z <|> ltII True Z
  -                         = Z <|> S <$> Z <|> S <$> Z <|> Empty
  - We get the set
  - { Z, (S Z), (S (S Z)) }
