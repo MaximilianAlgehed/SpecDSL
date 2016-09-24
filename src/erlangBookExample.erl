@@ -12,10 +12,7 @@ loop(XS) ->
     end.
 
 continue(I, XS) ->
-    Lst = (if
-                I > 0 -> [I|XS];
-                true  -> XS
-           end),
+    Lst = [I|XS],
     receive 
         {_, chooseLeft} -> loop(Lst);
         {_, chooseRight} -> finish(Lst)
