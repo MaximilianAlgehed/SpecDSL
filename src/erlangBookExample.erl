@@ -23,7 +23,7 @@ continue(I, XS) ->
 
 finish(XS) ->
     receive 
-        {Hs, {pure, requestBasket}} -> Hs ! {pure, XS}
+        {Hs, {pure, unit}} -> Hs ! {pure, XS}
     end,
     receive
         {_, chooseLeft} -> loop(XS);

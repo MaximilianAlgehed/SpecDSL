@@ -102,7 +102,7 @@ instance (Erlang t) => Erlang (Protocol t) where
     fromErlang (ErlAtom "chooseLeft")         = ChooseLeft
     fromErlang (ErlAtom "chooseRight")        = ChooseRight
 
-runErlang :: Erlang t
+runErlang :: (Erlang t, Show t)
           => Self -- Created by "createSelf \"name@localhost\""
           -> String -- module name
           -> String -- function name
@@ -127,14 +127,12 @@ runErlang self mod fun st = quickTest (runfun self) st
         erlangLoop ch mbox =
             do
                m <- mboxRecv mbox
-               putStrLn (show (toErlang m))
                put ch $ fromErlang m
                erlangLoop ch mbox
         
         haskellLoop ch mbox =
             do
                 m <- get ch
-                putStrLn (show (toErlang m))
                 mboxSend mbox (Short "erl") (Right "p") (mboxSelf mbox, m)
                 haskellLoop ch mbox
 
@@ -142,10 +140,10 @@ runErlang self mod fun st = quickTest (runfun self) st
 -- | that shows that a process does not implement
 -- | a session type OR it does not comply with the
 -- | spec in the form of an LTL formula
-quickTest :: BiChannel ch c =>
-    (ch (Protocol c) -> IO ()) -> -- Function to test
-    ST c ->                       -- The session type for the interaction
-    IO ()
+quickTest :: (BiChannel ch c, Show c)
+          => (ch (Protocol c) -> IO ()) -- Function to test
+          -> ST c                       -- The session type for the interaction
+          -> IO ()
 quickTest impl t = loop 100
     where
         loop 0 = putStrLn "\rO.K"
@@ -160,7 +158,10 @@ quickTest impl t = loop 100
                         loop (n-1)
                     else
                         do
+                            hPutStr stderr $ "\r                  \r"
                             putStrLn $ "Failed after "++(show (100 - n))++" tests"
+                            putStrLn "With:"
+                            putStrLn (show w)
                             return ()
 
 {- A translation of the bookshop example -}
@@ -170,16 +171,16 @@ bookShop = bookShop' ([] :: [Int])
 data Request = RequestBook 
 
 instance Erlang Request where
-    toErlang _ = ErlAtom "requestBook"
+    toErlang _ = ErlAtom "unit"
 
-    fromErlang (ErlAtom "requestBook") = RequestBook
+    fromErlang (ErlAtom "unit") = RequestBook
 
-bookShop' bs = Bang arbitrary (const True)
+bookShop' bs = Bang (fmap abs arbitrary) (>0)
                     (\b -> Choose
                             arbitrary
                             (bookShop' (b:bs))
                             (Bang (return RequestBook) (const True)
-                                (\i -> Que (return (b:bs)) (isSubsequenceOf bs)
+                                (\i -> Que (return (b:bs)) ((flip isSubsequenceOf) bs)
                                         (\bs' -> Choose
                                                     arbitrary
                                                     (bookShop' bs')
