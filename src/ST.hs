@@ -6,6 +6,11 @@
 import Test.QuickCheck
 import Data.List
 import Foreign.Erlang
+import Model
+import System.IO
+import Control.Concurrent
+import Control.Monad.Writer.Lazy
+import Control.Concurrent.Chan
 
 data Choice = L | R
 
@@ -46,7 +51,120 @@ dual (Choose gen l r)     = Branch gen (\c -> case c of
 dual (Branch gen cont)    = Choose gen (cont L) (cont R)
 dual End                  = End
 
-{- A translation of the bookshop example in to this view of session types -}
+sessionTest :: (BiChannel ch c)
+            => ST c
+            -> ch (Protocol c)
+            -> WriterT (Log c) IO Bool 
+sessionTest (Bang gen _ cont) ch =
+    do
+        value <- lift $ generate gen
+        lift $ put ch $ Pure (embed value)
+        tell [Sent (Pure (embed value))]
+        sessionTest (cont value) ch
+sessionTest (Que _ pred cont) ch =
+    do
+        Pure value <- lift $ get ch
+        tell [Got (Pure value)]
+        if pred (extract value) then
+            return False
+        else
+            sessionTest (cont (extract value)) ch
+sessionTest (Choose gen l r) ch =
+    do
+        choice <- lift $ generate gen
+        case choice of
+            L -> do
+                    tell [Sent ChooseLeft]
+                    lift $ put ch ChooseLeft
+                    sessionTest l ch
+            R -> do
+                    tell [Sent ChooseRight]
+                    lift $ put ch ChooseRight
+                    sessionTest r ch
+sessionTest (Branch _ cont) ch =
+    do
+        choice <- lift $ get ch
+        tell [Got choice]
+        case choice of
+            ChooseLeft -> do
+                            sessionTest (cont L) ch
+            ChooseRight -> do
+                            sessionTest (cont R) ch
+sessionTest End _ = return True
+
+-- | So that we can talk to Erlang!
+instance (Erlang t) => Erlang (Protocol t) where
+    toErlang (Pure t)    = ErlTuple [ErlAtom "pure", toErlang t]
+    toErlang ChooseLeft  = ErlAtom "chooseLeft"
+    toErlang ChooseRight = ErlAtom "chooseRight"
+
+    fromErlang (ErlTuple [ErlAtom "pure", t]) = Pure (fromErlang t)
+    fromErlang (ErlAtom "chooseLeft")         = ChooseLeft
+    fromErlang (ErlAtom "chooseRight")        = ChooseRight
+
+runErlang :: Erlang t
+          => Self -- Created by "createSelf \"name@localhost\""
+          -> String -- module name
+          -> String -- function name
+          -> ST t -- The session type for the interaction
+          -> IO ()
+runErlang self mod fun st = quickTest (runfun self) st
+    where
+        runfun :: (Erlang r) => Self -> P Chan (Protocol r) -> IO ()
+        runfun self ch =
+            do
+                mbox <- createMBox self
+                rpcCall mbox (Short "erl") mod fun []
+                id1 <- forkIO $ erlangLoop ch mbox
+                id2 <- forkIO $ haskellLoop ch mbox
+                return ()
+
+        finish pid id1 id2 =
+            do
+                killThread id1
+                killThread id2
+
+        erlangLoop ch mbox =
+            do
+               m <- mboxRecv mbox
+               put ch $ fromErlang m
+               erlangLoop ch mbox
+        
+        haskellLoop ch mbox =
+            do
+                m <- get ch
+                mboxSend mbox (Short "erl") (Right "p") (mboxSelf mbox, m)
+                haskellLoop ch mbox
+
+-- | Run multiple tests to find a counterexample
+-- | that shows that a process does not implement
+-- | a session type OR it does not comply with the
+-- | spec in the form of an LTL formula
+quickTest :: BiChannel ch c =>
+    (ch (Protocol c) -> IO ()) ->         -- Function to test
+    ST c ->                      -- The session type for the interaction
+    IO ()
+quickTest impl t = loop 1000
+    where
+        loop 0 = putStrLn "\rO.K"
+        loop n = do
+                    hPutStr stderr $ "\r                  \r"
+                    hPutStr stderr $ show n
+                    ch <- new
+                    forkIO $ impl (bidirect ch)
+                    b <- sessionTest t ch
+                    kill ch
+                    if b then
+                        loop (n-1)
+                    else
+                        do
+                            putStrLn $ "After "++(show (1000 - n))++" tests"
+                            return ()
+
+{- A translation of the bookshop example -}
+bookShop :: ST ErlType
+bookShop = bookShop' ([] :: [Int])
+
 bookShop' bs = Bang arbitrary (const True)
                     (\b -> Choose
                             arbitrary
