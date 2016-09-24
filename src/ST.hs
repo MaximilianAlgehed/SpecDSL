@@ -180,7 +180,7 @@ bookShop' bs = Bang (fmap abs arbitrary) (>0)
                             arbitrary
                             (bookShop' (b:bs))
                             (Bang (return RequestBook) (const True)
-                                (\i -> Que (return (b:bs)) ((flip isSubsequenceOf) bs)
+                                (\i -> Que (return (b:bs)) ((sort bs ==) . sort)
                                         (\bs' -> Choose
                                                     arbitrary
                                                     (bookShop' bs')
