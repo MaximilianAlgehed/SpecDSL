@@ -8,7 +8,7 @@ f() -> register(p, self()),
 
 loop(XS) ->
     receive 
-        {_, {pure, {book, I}}} -> continue(I, XS)
+        {_, {pure, I}} -> continue(I, XS)
     end.
 
 continue(I, XS) ->
@@ -23,7 +23,7 @@ continue(I, XS) ->
 
 finish(XS) ->
     receive 
-        {Hs, {pure, requestBasket}} -> Hs ! {pure, {yourBasket, XS}}
+        {Hs, {pure, requestBasket}} -> Hs ! {pure, XS}
     end,
     receive
         {_, chooseLeft} -> loop(XS);

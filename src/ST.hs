@@ -127,12 +127,14 @@ runErlang self mod fun st = quickTest (runfun self) st
         erlangLoop ch mbox =
             do
                m <- mboxRecv mbox
+               putStrLn (show (toErlang m))
                put ch $ fromErlang m
                erlangLoop ch mbox
         
         haskellLoop ch mbox =
             do
                 m <- get ch
+                putStrLn (show (toErlang m))
                 mboxSend mbox (Short "erl") (Right "p") (mboxSelf mbox, m)
                 haskellLoop ch mbox
 
@@ -165,12 +167,19 @@ quickTest impl t = loop 100
 bookShop :: ST ErlType
 bookShop = bookShop' ([] :: [Int])
 
+data Request = RequestBook 
+
+instance Erlang Request where
+    toErlang _ = ErlAtom "requestBook"
+
+    fromErlang (ErlAtom "requestBook") = RequestBook
+
 bookShop' bs = Bang arbitrary (const True)
                     (\b -> Choose
                             arbitrary
                             (bookShop' (b:bs))
-                            (Bang arbitrary (const True)
-                                (\i -> Que (return (b:bs)) (isSubsequenceOf (take i bs))
+                            (Bang (return RequestBook) (const True)
+                                (\i -> Que (return (b:bs)) (isSubsequenceOf bs)
                                         (\bs' -> Choose
                                                     arbitrary
                                                     (bookShop' bs')
