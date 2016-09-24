@@ -141,10 +141,10 @@ runErlang self mod fun st = quickTest (runfun self) st
 -- | a session type OR it does not comply with the
 -- | spec in the form of an LTL formula
 quickTest :: BiChannel ch c =>
-    (ch (Protocol c) -> IO ()) ->         -- Function to test
-    ST c ->                      -- The session type for the interaction
+    (ch (Protocol c) -> IO ()) -> -- Function to test
+    ST c ->                       -- The session type for the interaction
     IO ()
-quickTest impl t = loop 1000
+quickTest impl t = loop 100
     where
         loop 0 = putStrLn "\rO.K"
         loop n = do
@@ -152,13 +152,13 @@ quickTest impl t = loop 1000
                     hPutStr stderr $ show n
                     ch <- new
                     forkIO $ impl (bidirect ch)
-                    b <- sessionTest t ch
+                    (b, w) <- runWriterT $ sessionTest t ch
                     kill ch
                     if b then
                         loop (n-1)
                     else
                         do
-                            putStrLn $ "After "++(show (1000 - n))++" tests"
+                            putStrLn $ "Failed after "++(show (100 - n))++" tests"
                             return ()
 
 {- A translation of the bookshop example -}
