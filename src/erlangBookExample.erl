@@ -23,7 +23,7 @@ continue(I, XS) ->
 
 finish(XS) ->
     receive 
-        {Hs, {pure, unit}} -> Hs ! {pure, XS}
+        {Hs, {pure, requestBooks}} -> Hs ! {pure, XS}
     end,
     receive
         {_, chooseLeft} -> loop(XS);

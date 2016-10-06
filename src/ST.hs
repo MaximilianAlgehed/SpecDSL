@@ -24,51 +24,55 @@ instance Arbitrary Choice where
 
 class a :<: b where
     embed   :: a -> b
-    extract :: b -> a
+    extract :: b -> Maybe a
 
 instance a :<: a where
     embed   = id
-    extract = id
+    extract = Just . id
+
+type Predicate a = (Gen a, a -> Bool)
 
 instance (Erlang a) => a :<: ErlType where
     embed = toErlang
-    extract = fromErlang
+    extract = Just . fromErlang
 
 data ST c where
-    Bang   :: (a :<: c) => Gen a -> (a -> Bool) -> (a -> ST c) -> ST c
-    Que    :: (a :<: c) => Gen a -> (a -> Bool) -> (a -> ST c) -> ST c 
+    Bang   :: (a :<: c) => Predicate a -> (a -> ST c) -> ST c
+    Que    :: (a :<: c) => Predicate a -> (a -> ST c) -> ST c 
     Choose :: Gen Choice -> ST c -> ST c -> ST c
     Branch :: Gen Choice -> (Choice -> ST c) -> ST c
     End    :: ST c
 
 dual :: ST a -> ST a
-dual (Bang gen pred cont) = Que gen pred (dual . cont)
-dual (Que gen pred cont)  = Bang gen pred (dual . cont)
-dual (Choose gen l r)     = Branch gen (\c -> case c of
+dual (Bang pred cont)  = Que pred (dual . cont)
+dual (Que pred cont)   = Bang pred (dual . cont)
+dual (Choose gen l r)  = Branch gen (\c -> case c of
                                             L -> l
                                             R -> r
-                                       )
-dual (Branch gen cont)    = Choose gen (cont L) (cont R)
-dual End                  = End
+                                    )
+dual (Branch gen cont) = Choose gen (cont L) (cont R)
+dual End               = End
 
 sessionTest :: (BiChannel ch c)
             => ST c
             -> ch (Protocol c)
             -> WriterT (Log c) IO Bool 
-sessionTest (Bang gen _ cont) ch =
+sessionTest (Bang (gen, _) cont) ch =
     do
         value <- lift $ generate gen
         lift $ put ch $ Pure (embed value)
         tell [Sent (Pure (embed value))]
         sessionTest (cont value) ch
-sessionTest (Que _ pred cont) ch =
+sessionTest (Que (_, pred) cont) ch =
     do
-        Pure value <- lift $ get ch
-        tell [Got (Pure value)]
-        if pred (extract value) then
-            return False
-        else
-            sessionTest (cont (extract value)) ch
+        Pure mv <- lift $ get ch
+        tell [Got (Pure mv)]
+        case extract mv of
+            Just value -> if pred value then
+                            sessionTest (cont value) ch
+                          else
+                            return False
+            Nothing    -> return False
 sessionTest (Choose gen l r) ch =
     do
         choice <- lift $ generate gen
@@ -136,10 +140,7 @@ runErlang self mod fun st = quickTest (runfun self) st
                 mboxSend mbox (Short "erl") (Right "p") (mboxSelf mbox, m)
                 haskellLoop ch mbox
 
--- | Run multiple tests to find a counterexample
--- | that shows that a process does not implement
--- | a session type OR it does not comply with the
--- | spec in the form of an LTL formula
+-- Run some tests
 quickTest :: (BiChannel ch c, Show c)
           => (ch (Protocol c) -> IO ()) -- Function to test
           -> ST c                       -- The session type for the interaction
@@ -164,28 +165,36 @@ quickTest impl t = loop 100
                             putStrLn (show w)
                             return ()
 
-{- A translation of the bookshop example -}
+-- Some generator-predicate pairs
+posNum :: (Ord a, Num a, Arbitrary a) => Predicate a
+posNum = (fmap ((+1) . abs) arbitrary, (>0))
+
+is :: (Eq a) => a -> Predicate a
+is a = (return a, (a==))
+
+isPermutation :: (Ord a) => [a] -> Predicate [a]
+isPermutation bs = (shuffle bs, ((sort bs) ==) . sort)
+
+{- An example of "buying books from amazon" -}
 bookShop :: ST ErlType
 bookShop = bookShop' ([] :: [Int])
 
-data Request = RequestBook 
+data Request = RequestBooks deriving Eq
 
 instance Erlang Request where
-    toErlang _ = ErlAtom "unit"
+    toErlang _ = ErlAtom "requestBooks"
 
-    fromErlang (ErlAtom "unit") = RequestBook
+    fromErlang (ErlAtom "requestBooks") = RequestBooks
 
-bookShop' bs = Bang (fmap abs arbitrary) (>0)
-                    (\b -> Choose
-                            arbitrary
-                            (bookShop' (b:bs))
-                            (Bang (return RequestBook) (const True)
-                                (\i -> Que (return (b:bs)) ((sort bs ==) . sort)
-                                        (\bs' -> Choose
-                                                    arbitrary
-                                                    (bookShop' bs')
-                                                    End
-                                        )
-                                )
-                            )
-                    )
+-- This demonstrates that syntax is an issue :/
+-- maybe Koen has some nice ideas for combinators
+-- that could make this very pretty indeed
+bookShop' bs = Bang posNum $
+               \b -> let bs' = b:bs in
+                    Choose arbitrary
+                        (bookShop' bs') $
+                        Bang (is RequestBooks) $
+                        \i -> Que (isPermutation bs') $
+                        \bs' -> Choose arbitrary
+                                       (bookShop' bs')
+                                       End
