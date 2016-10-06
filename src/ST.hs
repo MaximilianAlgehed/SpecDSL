@@ -175,6 +175,9 @@ is a = (return a, (a==))
 isPermutation :: (Ord a) => [a] -> Predicate [a]
 isPermutation bs = (shuffle bs, ((sort bs) ==) . sort)
 
+(|||) :: Predicate a -> Predicate a -> Predicate a
+(lg, l) ||| (rg, r) = (oneof [lg, rg], (\a -> l a || r a))
+
 {- An example of "buying books from amazon" -}
 bookShop :: ST ErlType
 bookShop = bookShop' ([] :: [Int])
