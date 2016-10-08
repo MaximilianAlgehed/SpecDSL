@@ -1,7 +1,7 @@
 {-# LANGUAGE MultiParamTypeClasses, DeriveFunctor, FlexibleContexts, FlexibleInstances #-}
 -- | This file gives a model of communication between two actors implementing a session
 -- | type
-module Model where
+module BiCh where
 import Control.Concurrent.Chan
 
 -- | Protocol

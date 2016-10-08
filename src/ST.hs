@@ -6,7 +6,7 @@
 import Test.QuickCheck
 import Data.List
 import Foreign.Erlang
-import Model
+import BiCh 
 import System.IO
 import Control.Concurrent
 import Control.Monad.Writer.Lazy
@@ -40,18 +40,15 @@ data ST c where
     Bang   :: (a :<: c) => Predicate a -> (a -> ST c) -> ST c
     Que    :: (a :<: c) => Predicate a -> (a -> ST c) -> ST c 
     Choose :: Gen Choice -> ST c -> ST c -> ST c
-    Branch :: Gen Choice -> (Choice -> ST c) -> ST c
+    Branch :: Gen Choice -> ST c -> ST c -> ST c
     End    :: ST c
 
 dual :: ST a -> ST a
-dual (Bang pred cont)  = Que pred (dual . cont)
-dual (Que pred cont)   = Bang pred (dual . cont)
-dual (Choose gen l r)  = Branch gen (\c -> case c of
-                                            L -> l
-                                            R -> r
-                                    )
-dual (Branch gen cont) = Choose gen (cont L) (cont R)
-dual End               = End
+dual (Bang pred cont) = Que pred (dual . cont)
+dual (Que pred cont)  = Bang pred (dual . cont)
+dual (Choose gen l r) = Branch gen l r 
+dual (Branch gen l r) = Choose gen l r
+dual End              = End
 
 sessionTest :: (BiChannel ch c)
             => ST c
@@ -85,15 +82,15 @@ sessionTest (Choose gen l r) ch =
                     tell [Sent ChooseRight]
                     lift $ put ch ChooseRight
                     sessionTest r ch
-sessionTest (Branch _ cont) ch =
+sessionTest (Branch _ l r) ch =
     do
         choice <- lift $ get ch
         tell [Got choice]
         case choice of
             ChooseLeft -> do
-                            sessionTest (cont L) ch
+                            sessionTest l ch
             ChooseRight -> do
-                            sessionTest (cont R) ch
+                            sessionTest r ch
 sessionTest End _ = return True
 
 -- | So that we can talk to Erlang!
@@ -186,6 +183,15 @@ isPermutation bs = (shuffle bs, ((sort bs) ==) . sort)
 any :: (Arbitrary a) => Predicate a
 any = (arbitrary, const True)
 
+(<|>) = Choose arbitrary
+infixr 0 <|>
+
+(<&>) = Branch arbitrary
+infixr 0 <&>
+
+f .- c = f (const c)
+infixr 0 .-
+
 {- An example of "buying books from amazon" -}
 bookShop :: ST ErlType
 bookShop = bookShop' ([] :: [Int])
@@ -202,10 +208,25 @@ instance Erlang Request where
 -- that could make this very pretty indeed
 bookShop' bs = Bang posNum $
                \b -> let bs' = b:bs in
-                    Choose arbitrary
-                        (bookShop' bs') $
-                        Bang (is RequestBooks) $
+                   (bookShop' bs')
+                   <|>
+                   Bang (is RequestBooks) $
                         \i -> Que (isPermutation bs') $
-                        \bs' -> Choose arbitrary
-                                       (bookShop' bs')
-                                       End
+                        \bs' ->
+                            (bookShop' bs')
+                            <|>
+                            End
+
+{- The example from POPL SRC -}
+client :: ST ErlType
+client =
+    Bang validPlate .-
+    Que (is "ERR_CAR_NOT_FOUND" ||| validTaxID) .-
+    client <|> End
+
+-- Dummy predicates
+validPlate :: Predicate String
+validPlate = (arbitrary, const True)
+
+validTaxID :: Predicate String
+validTaxID = (arbitrary, const True)
