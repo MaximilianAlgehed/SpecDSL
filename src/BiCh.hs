@@ -8,7 +8,7 @@ import Control.Concurrent.Chan
 data Protocol t = Pure t
                 | ChooseLeft
                 | ChooseRight
-                deriving (Show, Functor)
+                deriving (Show,Functor)
 
 data Interaction t = Got t | Sent t deriving (Show, Functor)
 type Log t = [Interaction (Protocol t)]

@@ -31,15 +31,18 @@ instance a :<: a where
     embed   = id
     extract = Just . id
 
-type Predicate a = (Gen a, a -> Bool)
+type Predicate a = (Gen a, a -> Maybe String)
+
+predicate :: String -> (Gen a, (a -> Bool)) -> Predicate a
+predicate s (g, p) = (g, \a -> guard (not (p a)) >> return s)
 
 instance (Erlang a) => a :<: ErlType where
     embed = toErlang
     extract = Just . fromErlang
 
 data ST c where
-    Send   :: (a :<: c) => Predicate a -> (a -> ST c) -> ST c
-    Get    :: (a :<: c) => Predicate a -> (a -> ST c) -> ST c 
+    Send   :: (Show a, a :<: c) => Predicate a -> (a -> ST c) -> ST c
+    Get    :: (Show a, a :<: c) => Predicate a -> (a -> ST c) -> ST c 
     Choose :: Gen Choice -> ST c -> ST c -> ST c
     Branch :: Gen Choice -> ST c -> ST c -> ST c
     End    :: ST c
@@ -54,7 +57,7 @@ dual End              = End
 sessionTest :: (BiChannel ch c)
             => ST c
             -> ch (Protocol c)
-            -> WriterT (Log c) IO Bool 
+            -> WriterT (Log c) IO (Maybe String)
 sessionTest (Send (gen, _) cont) ch =
     do
         value <- lift $ generate gen
@@ -66,11 +69,11 @@ sessionTest (Get (_, pred) cont) ch =
         Pure mv <- lift $ get ch
         tell [Got (Pure mv)]
         case extract mv of
-            Just value -> if pred value then
+            Just value -> if pred value == Nothing then
                             sessionTest (cont value) ch
                           else
-                            return False
-            Nothing    -> return False
+                            return $ fmap (++" "++(show value)) (pred value)
+            Nothing    -> return $ Just "Type error!"
 sessionTest (Choose gen l r) ch =
     do
         choice <- lift $ generate gen
@@ -92,7 +95,7 @@ sessionTest (Branch _ l r) ch =
                             sessionTest l ch
             ChooseRight -> do
                             sessionTest r ch
-sessionTest End _ = return True
+sessionTest End _ = return Nothing
 
 -- | So that we can talk to Erlang!
 instance (Erlang t) => Erlang (Protocol t) where
@@ -110,7 +113,7 @@ runErlang :: (Erlang t, Show t)
           -> String -- function name
           -> ST t -- The session type for the interaction
           -> IO ()
-runErlang self mod fun st = quickTest (runfun self) st
+runErlang self mod fun st = specCheck (runfun self) st
     where
         runfun :: (Erlang r) => Self -> P Chan (Protocol r) -> IO ()
         runfun self ch =
@@ -139,11 +142,11 @@ runErlang self mod fun st = quickTest (runfun self) st
                 haskellLoop ch mbox
 
 -- Run some tests
-quickTest :: (BiChannel ch c, Show c)
+specCheck :: (BiChannel ch c, Show c)
           => (ch (Protocol c) -> IO ()) -- Function to test
           -> ST c                       -- The session type for the interaction
           -> IO ()
-quickTest impl t = loop 100
+specCheck impl t = loop 100
     where
         loop 0 = putStrLn "\rO.K"
         loop n = do
@@ -153,36 +156,57 @@ quickTest impl t = loop 100
                     forkIO $ impl (bidirect ch)
                     (b, w) <- runWriterT $ sessionTest t ch
                     kill ch
-                    if b then
+                    if b == Nothing then
                         loop (n-1)
                     else
                         do
                             hPutStr stderr $ "\r                  \r"
                             putStrLn $ "Failed after "++(show (100 - n))++" tests"
-                            putStrLn "With:"
-                            putStrLn (show w)
+                            putStrLn $ "With: "++(fromJust b)
+                            putStrLn "In:"
+                            putStrLn "---"
+                            sequence_ $ map (putStrLn . ("    "++) . printTrace) w
+                            putStrLn "---"
                             return ()
+
+printTrace (Got (Pure x))   = "Got ("++(show x)++")"
+printTrace (Got ChooseLeft) = "Branched left"
+printTrace (Got ChooseRight) = "Branched right"
+printTrace (Sent (Pure x))  = "Sent ("++(show x)++")"
+printTrace (Sent ChooseLeft) = "Chose left"
+printTrace (Sent ChooseRight) = "Chose right"
+
+fromJust (Just x) = x
 
 -- Some generator-predicate pairs
 posNum :: (Ord a, Num a, Arbitrary a) => Predicate a
-posNum = (fmap ((+1) . abs) arbitrary, (>0))
+posNum = predicate "posNum" (fmap ((\x -> x-1) . abs) arbitrary, (>0))
 
-is :: (Eq a) => a -> Predicate a
-is a = (return a, (a==))
+is :: (Eq a, Show a) => a -> Predicate a
+is a = predicate ("is "++(show a)) (return a,(a==))
 
-isPermutation :: (Ord a) => [a] -> Predicate [a]
-isPermutation bs = (shuffle bs, ((sort bs) ==) . sort)
+isPermutation :: (Ord a, Show a) => [a] -> Predicate [a]
+isPermutation bs = predicate ("isPermutation " ++ (show bs)) (shuffle bs, (((sort bs) ==) . sort))
 
 (|||) :: Predicate a -> Predicate a -> Predicate a
-(lg, l) ||| (rg, r) = (oneof [lg, rg], (\a -> l a || r a))
+(lg, l) ||| (rg, r) = (oneof [lg, rg], disj l r)
+    where
+        disj l r a = do
+                        sl <- l a
+                        sr <- r a
+                        return $ "("++ sl ++ " || " ++ sr ++ ")"
 
 (&&&) :: Predicate a -> Predicate a -> Predicate a
-(lg, l) &&& (rg, r) = (oneof [lg, rg] `suchThat` p, p)
+(lg, l) &&& (rg, r) = (oneof [lg, rg] `suchThat` (\a -> p a == Nothing), p)
     where
-        p a = r a && l a
+        p a = case r a of
+                Nothing -> case l a of
+                            Nothing -> Nothing
+                            Just s  -> Just s
+                Just s  -> Just s
 
 any :: (Arbitrary a) => Predicate a
-any = (arbitrary, const True)
+any = (arbitrary, const Nothing)
 
 (<|>) = Choose arbitrary
 infixr 0 <|>
@@ -197,7 +221,7 @@ infixr 0 .-
 bookShop :: ST ErlType
 bookShop = bookShop' ([] :: [Int])
 
-data Request = RequestBooks deriving Eq
+data Request = RequestBooks deriving (Eq, Show)
 
 instance Erlang Request where
     toErlang _ = ErlAtom "requestBooks"
@@ -212,25 +236,8 @@ bookShop' bs = Send posNum $
                    (bookShop' bs')
                    <|>
                    Send (is RequestBooks) $
-                        \i -> Get (isPermutation bs') $
-                        \bs' ->
-                            (bookShop' bs')
-                            <|>
-                            End
-
-{- The example from POPL SRC -}
-client :: ST ErlType
-client =
-    Send validPlate .-
-    Get (is "ERR_CAR_NOT_FOUND" ||| validTaxID) .-
-    client <|> End
-
--- Dummy predicates
-validPlate :: Predicate String
-validPlate = (arbitrary, const True)
-
-validTaxID :: Predicate String
-validTaxID = (arbitrary, const True)
+                        \i   -> Get (isPermutation bs') $
+                        \bs' -> (bookShop' bs') <|> End
 
 {- The new example from POPL SRC -}
 protocol :: ([Action] :<: t, [Status] :<: t, [Double] :<: t) => ST t
@@ -245,9 +252,13 @@ execActs =
 continue :: ([Action] :<: t, [Status] :<: t, [Double] :<: t) => ST t
 continue = protocol <|> End
 
-validData = (sequence $ [arbitrary, arbitrary, arbitrary], \xs -> length (xs :: [Double]) == 3 )
+validData = predicate "validData" (sequence $ [arbitrary, arbitrary, arbitrary], \xs -> length (xs :: [Double]) == 3 )
 
 data Action = Output Int Int | Input Int
+
+instance Show Action where
+    show (Output i j) = "Output "++(show i)++" high for "++(show j)++" seconds"
+    show (Input i)    = "Get input "++(show i)
 
 instance Arbitrary Action where
     arbitrary = oneof [do
@@ -258,9 +269,13 @@ instance Arbitrary Action where
 
 data Status = Out Int Bool | Inp Int Double
 
+instance Show Status where
+    show (Out i b) = "Output "++(show i)++" "++(if b then "OK" else "ERR")
+    show (Inp i d) = "Input "++(show i)++" "++(show d)
+
 validActs = any
 
-validStatus acts = (sequence (map mkGen acts), \xs -> and $ zipWith isValid acts xs)
+validStatus acts = predicate "validStatus" (sequence (map mkGen acts), \xs -> and $ zipWith isValid acts xs)
     where
         isValid (Output _ _) (Inp _ _) = False
         isValid (Output i _) (Out j _) = i == j
