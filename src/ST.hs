@@ -3,8 +3,9 @@
              MultiParamTypeClasses,
              FlexibleInstances,
              FlexibleContexts #-}
+import Prelude hiding (any)
 import Test.QuickCheck
-import Data.List
+import Data.List hiding (any)
 import Foreign.Erlang
 import BiCh 
 import System.IO
@@ -37,15 +38,15 @@ instance (Erlang a) => a :<: ErlType where
     extract = Just . fromErlang
 
 data ST c where
-    Bang   :: (a :<: c) => Predicate a -> (a -> ST c) -> ST c
-    Que    :: (a :<: c) => Predicate a -> (a -> ST c) -> ST c 
+    Send   :: (a :<: c) => Predicate a -> (a -> ST c) -> ST c
+    Get    :: (a :<: c) => Predicate a -> (a -> ST c) -> ST c 
     Choose :: Gen Choice -> ST c -> ST c -> ST c
     Branch :: Gen Choice -> ST c -> ST c -> ST c
     End    :: ST c
 
 dual :: ST a -> ST a
-dual (Bang pred cont) = Que pred (dual . cont)
-dual (Que pred cont)  = Bang pred (dual . cont)
+dual (Send pred cont) = Get pred (dual . cont)
+dual (Get pred cont)  = Send pred (dual . cont)
 dual (Choose gen l r) = Branch gen l r 
 dual (Branch gen l r) = Choose gen l r
 dual End              = End
@@ -54,13 +55,13 @@ sessionTest :: (BiChannel ch c)
             => ST c
             -> ch (Protocol c)
             -> WriterT (Log c) IO Bool 
-sessionTest (Bang (gen, _) cont) ch =
+sessionTest (Send (gen, _) cont) ch =
     do
         value <- lift $ generate gen
         lift $ put ch $ Pure (embed value)
         tell [Sent (Pure (embed value))]
         sessionTest (cont value) ch
-sessionTest (Que (_, pred) cont) ch =
+sessionTest (Get (_, pred) cont) ch =
     do
         Pure mv <- lift $ get ch
         tell [Got (Pure mv)]
@@ -206,12 +207,12 @@ instance Erlang Request where
 -- This demonstrates that syntax is an issue :/
 -- maybe Koen has some nice ideas for combinators
 -- that could make this very pretty indeed
-bookShop' bs = Bang posNum $
+bookShop' bs = Send posNum $
                \b -> let bs' = b:bs in
                    (bookShop' bs')
                    <|>
-                   Bang (is RequestBooks) $
-                        \i -> Que (isPermutation bs') $
+                   Send (is RequestBooks) $
+                        \i -> Get (isPermutation bs') $
                         \bs' ->
                             (bookShop' bs')
                             <|>
@@ -220,8 +221,8 @@ bookShop' bs = Bang posNum $
 {- The example from POPL SRC -}
 client :: ST ErlType
 client =
-    Bang validPlate .-
-    Que (is "ERR_CAR_NOT_FOUND" ||| validTaxID) .-
+    Send validPlate .-
+    Get (is "ERR_CAR_NOT_FOUND" ||| validTaxID) .-
     client <|> End
 
 -- Dummy predicates
@@ -230,3 +231,41 @@ validPlate = (arbitrary, const True)
 
 validTaxID :: Predicate String
 validTaxID = (arbitrary, const True)
+
+{- The new example from POPL SRC -}
+protocol :: ([Action] :<: t, [Status] :<: t, [Double] :<: t) => ST t
+protocol = Send validData .- (execActs <&> continue)
+
+execActs :: ([Action] :<: t, [Status] :<: t, [Double] :<: t) => ST t
+execActs =
+    Get validActs $ \acts ->
+    Send (validStatus acts) .-
+    continue
+
+continue :: ([Action] :<: t, [Status] :<: t, [Double] :<: t) => ST t
+continue = protocol <|> End
+
+validData = (sequence $ [arbitrary, arbitrary, arbitrary], \xs -> length (xs :: [Double]) == 3 )
+
+data Action = Output Int Int | Input Int
+
+instance Arbitrary Action where
+    arbitrary = oneof [do
+                        x <- arbitrary
+                        y <- arbitrary
+                        return $ Output x y,
+                       fmap Input arbitrary]
+
+data Status = Out Int Bool | Inp Int Double
+
+validActs = any
+
+validStatus acts = (sequence (map mkGen acts), \xs -> and $ zipWith isValid acts xs)
+    where
+        isValid (Output _ _) (Inp _ _) = False
+        isValid (Output i _) (Out j _) = i == j
+        isValid (Input i) (Out _ _) = False
+        isValid (Input i) (Inp j _)    = i == j
+        
+        mkGen (Output i _) = fmap (Out i) arbitrary
+        mkGen (Input i)    = fmap (Inp i) arbitrary
